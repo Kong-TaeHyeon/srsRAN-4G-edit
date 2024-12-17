@@ -174,6 +174,7 @@ void rrc::init(phy_interface_rrc_lte* phy_,
 
 void rrc::stop()
 {
+  std::cout << "RRC Stop" << std::endl;
   running = false;
   stop_timers();
   cmd_msg_t msg;
@@ -687,7 +688,10 @@ void rrc::radio_link_failure_process()
   srsran::console("Warning: Detected Radio-Link Failure\n");
 
   // Store the information in VarRLF-Report
-  var_rlf_report.set_failure(meas_cells, rrc_rlf_report::rlf);
+  // var_rlf_report.set_failure(meas_cells, rrc_rlf_report::rlf);
+
+  start_go_idle();
+  return;
 
   if (state == RRC_STATE_CONNECTED) {
     if (security_is_activated) {
@@ -735,6 +739,8 @@ void rrc::protocol_failure()
 
 void rrc::timer_expired(uint32_t timeout_id)
 {
+
+  std::cout <<"timer_expired (rrc)" << std::endl;
   if (timeout_id == t310.id()) {
     logger.info("Timer T310 expired: Radio Link Failure");
     radio_link_failure_push_cmd();
@@ -1216,20 +1222,22 @@ void rrc::leave_connected()
   security_is_activated = false;
 
   // 1> reset MAC;
-  mac->reset();
+  // mac->reset();
 
   // 1> stop all timers that are running except T320;
   stop_timers();
 
   // 1> release all radio resources, including release of the RLC entity, the MAC configuration and the associated
   //    PDCP entity for all established RBs
+
   rlc->reset();
   pdcp->reset();
   set_mac_default();
+
   stack->reset_eps_bearers();
 
   // 1> indicate the release of the RRC connection to upper layers together with the release cause;
-  nas->left_rrc_connected();
+  // nas->left_rrc_connected();
 
   // 1> if leaving RRC_CONNECTED was not triggered by reception of the MobilityFromEUTRACommand message:
   //    2> enter RRC_IDLE by performing cell selection in accordance with the cell selection process, defined for the
@@ -1237,7 +1245,7 @@ void rrc::leave_connected()
   logger.info("Going RRC_IDLE");
   if (phy->cell_is_camping()) {
     // Receive paging
-    mac->pcch_start_rx();
+    // mac->pcch_start_rx();
   }
 }
 
@@ -2738,13 +2746,16 @@ void rrc::handle_con_setup(const rrc_conn_setup_s& setup)
   t300.stop();
   t302.stop();
   srsran::console("RRC Connected\n");
-
+  
   // defer transmission of Setup Complete until PHY reconfiguration has been completed
   if (not conn_setup_proc.launch(&setup.crit_exts.c1().rrc_conn_setup_r8().rr_cfg_ded, std::move(dedicated_info_nas))) {
     logger.error("Failed to initiate connection setup procedure");
     return;
   }
   callback_list.add_proc(conn_setup_proc);
+
+  // leave_connected();
+  state = RRC_STATE_IDLE;
 }
 
 /* Reception of RRCConnectionReestablishment by the UE 5.3.7.5 */
@@ -2962,7 +2973,7 @@ void rrc::add_mrb(uint32_t lcid, uint32_t port)
 void rrc::set_phy_default_pucch_srs()
 {
   if (phy_ctrl != nullptr) {
-    phy_ctrl->set_phy_to_default_pucch_srs();
+    // phy_ctrl->set_phy_to_default_pucch_srs();
   } else {
     logger.info("RRC not initialized. Skipping default PUCCH/SRS config.");
   }

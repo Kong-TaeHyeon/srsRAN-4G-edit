@@ -27,8 +27,10 @@
 #include <inttypes.h> // for printing uint64_t
 #include <stdint.h>
 #include <stdlib.h>
-
+#include <cstdlib>  // std::srand, std::rand
+#include <ctime>    // std::time
 /* Random access procedure as specified in Section 5.1 of 36.321 */
+
 
 namespace srsue {
 
@@ -71,6 +73,8 @@ void ra_proc::init(phy_interface_mac_lte*               phy_h_,
   srsran_softbuffer_rx_init(&softbuffer_rar, 10);
 
   reset();
+  std::srand(std::time(nullptr));
+
 }
 
 ra_proc::~ra_proc()
@@ -154,6 +158,7 @@ void ra_proc::state_pdcch_setup()
 {
   phy_interface_mac_lte::prach_info_t info = phy_h->prach_get_info();
   if (info.is_transmitted) {
+    // int random_value = 1 + (std::rand() % 10);
     ra_tti  = info.tti_ra;
     ra_rnti = 1 + (ra_tti % 10) + (10 * info.f_id);
     rInfo("seq=%d, ra-rnti=0x%x, ra-tti=%d, f_id=%d", sel_preamble.load(), ra_rnti, info.tti_ra, info.f_id);
@@ -228,9 +233,10 @@ void ra_proc::initialization()
   current_task_id++;
   transmitted_contention_id   = 0;
   preambleTransmissionCounter = 1;
-  mux_unit->msg3_flush();
+  // mux_unit->msg3_flush();
   backoff_param_ms  = 0;
   transmitted_crnti = 0;
+
   resource_selection();
 }
 
@@ -497,7 +503,7 @@ void ra_proc::complete()
   }
   rntis->clear_temp_rnti();
 
-  mux_unit->msg3_flush();
+  // mux_unit->msg3_flush();
 
   rrc->ra_completed();
 
@@ -505,6 +511,8 @@ void ra_proc::complete()
   rInfo("Random Access Complete.     c-rnti=0x%x, ta=%d", rntis->get_crnti(), current_ta);
 
   state = IDLE;
+
+  initialization();
 }
 
 void ra_proc::start_mac_order(uint32_t msg_len_bits)

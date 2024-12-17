@@ -165,7 +165,7 @@ void mac::reset()
   // Releases UL resources and Resets HARQ processes
   timer_alignment_expire();
 
-  mux_unit.msg3_flush();
+  // mux_unit.msg3_flush();
   mux_unit.reset();
 
   demux_unit.reset();

@@ -110,6 +110,7 @@ int nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_n
   }
 
   running = true;
+  std::cout << "NAS INIT" << std::endl;
   return SRSRAN_SUCCESS;
 }
 
@@ -172,7 +173,7 @@ void nas::clear_eps_bearer()
   // Deactivate EPS bearer according to Sec. 5.5.2.2.2
   logger.debug("Clearing EPS bearer context");
   for (const auto& bearer : eps_bearer) {
-    gw->deactivate_eps_bearer(bearer.second.eps_bearer_id);
+    // gw->deactivate_eps_bearer(bearer.second.eps_bearer_id);
   }
   eps_bearer.clear();
 }
@@ -195,7 +196,8 @@ void nas::enter_emm_deregistered_initiated()
 void nas::enter_emm_deregistered(emm_state_t::deregistered_substate_t substate)
 {
   // TODO Start cell selection.
-  clear_eps_bearer();
+  std::cout <<"ENTER_EMM_DEREGISTERED" << std::endl;
+  // clear_eps_bearer();
   state.set_deregistered(substate);
 }
 
@@ -239,7 +241,7 @@ void nas::timer_expired(uint32_t timeout_id)
                  airplane_mode_state == DISABLED ? "disabled" : "enabled");
     if (airplane_mode_state == DISABLED) {
       // Enabling air-plane mode
-      send_detach_request(true);
+      // send_detach_request(true);
       airplane_mode_state = ENABLED;
 
       if (cfg.sim.airplane_t_on_ms > 0) {
@@ -281,7 +283,7 @@ bool nas::switch_on()
 bool nas::switch_off()
 {
   logger.info("Switching off");
-  detach_request(true);
+  // detach_request(true);
   return true;
 }
 
@@ -400,14 +402,14 @@ bool nas::detach_request(const bool switch_off)
     case emm_state_t::state_t::registered_initiated:
     case emm_state_t::state_t::registered: // Fall-through
       // send detach request
-      send_detach_request(switch_off);
+      // send_detach_request(switch_off);
       break;
     default:
       logger.debug("Received request to detach in state %s", state.get_full_state_text().c_str());
       break;
   }
   if (switch_off) {
-    enter_emm_null();
+    // enter_emm_null();
   }
   return false;
 }
@@ -641,6 +643,7 @@ bool nas::get_ipv6_addr(uint8_t* ipv6_addr)
 void nas::start_plmn_selection_proc()
 {
   logger.debug("Attempting to select PLMN");
+  // std::cout << "start_plmn_selection_proc" << std::endl;
   if (plmn_searcher.is_idle()) {
     logger.info("No PLMN selected. Starting PLMN Selection...");
     if (not plmn_searcher.launch()) {
@@ -850,18 +853,24 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
       ip_addr |= act_def_eps_bearer_context_req.pdn_addr.addr[2] << 8u;
       ip_addr |= act_def_eps_bearer_context_req.pdn_addr.addr[3];
 
-      logger.info("Network attach successful. APN: %s, IP: %u.%u.%u.%u",
+      logger.info("Network attach successful1. APN: %s, IP: %u.%u.%u.%u",
                   act_def_eps_bearer_context_req.apn.apn,
                   act_def_eps_bearer_context_req.pdn_addr.addr[0],
                   act_def_eps_bearer_context_req.pdn_addr.addr[1],
                   act_def_eps_bearer_context_req.pdn_addr.addr[2],
                   act_def_eps_bearer_context_req.pdn_addr.addr[3]);
 
-      srsran::console("Network attach successful. IP: %u.%u.%u.%u\n",
+      srsran::console("Network attach successful2. IP: %u.%u.%u.%u\n",
                       act_def_eps_bearer_context_req.pdn_addr.addr[0],
                       act_def_eps_bearer_context_req.pdn_addr.addr[1],
                       act_def_eps_bearer_context_req.pdn_addr.addr[2],
                       act_def_eps_bearer_context_req.pdn_addr.addr[3]);
+
+      srsran::console("Switch Off \n");
+      enter_emm_deregistered(emm_state_t::deregistered_substate_t::attempting_to_attach);
+
+
+      return;
 
       // Setup GW
       char* err_str = nullptr;
@@ -875,7 +884,7 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
       }
     } else if (LIBLTE_MME_PDN_TYPE_IPV6 == act_def_eps_bearer_context_req.pdn_addr.pdn_type) {
       memcpy(ipv6_if_id, act_def_eps_bearer_context_req.pdn_addr.addr, 8);
-      logger.info("Network attach successful. APN: %s, IPv6 interface id: %02x%02x:%02x%02x:%02x%02x:%02x%02x",
+      logger.info("Network attach successful3. APN: %s, IPv6 interface id: %02x%02x:%02x%02x:%02x%02x:%02x%02x",
                   act_def_eps_bearer_context_req.apn.apn,
                   act_def_eps_bearer_context_req.pdn_addr.addr[0],
                   act_def_eps_bearer_context_req.pdn_addr.addr[1],
@@ -886,7 +895,7 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
                   act_def_eps_bearer_context_req.pdn_addr.addr[6],
                   act_def_eps_bearer_context_req.pdn_addr.addr[7]);
 
-      srsran::console("Network attach successful. IPv6 interface Id: %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+      srsran::console("Network attach successful4. IPv6 interface Id: %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
                       act_def_eps_bearer_context_req.pdn_addr.addr[0],
                       act_def_eps_bearer_context_req.pdn_addr.addr[1],
                       act_def_eps_bearer_context_req.pdn_addr.addr[2],
@@ -1107,19 +1116,20 @@ void nas::parse_authentication_request(uint32_t lcid, unique_byte_buffer_t pdu, 
   if (auth_result == AUTH_OK) {
     logger.info("Network authentication successful");
     // MME wants to re-establish security context, use provided protection level until security (re-)activation
+    srsran::console("auth_result == AUTH_OK, enter_emm_deregistered\n");
     current_sec_hdr = sec_hdr_type;
 
-    send_authentication_response(res, res_len);
+    // send_authentication_response(res, res_len);
     logger.info(ctxt.k_asme, 32, "Generated k_asme:");
     set_k_enb_count(0);
     auth_request = true;
   } else if (auth_result == AUTH_SYNCH_FAILURE) {
     logger.error("Network authentication synchronization failure.");
-    send_authentication_failure(LIBLTE_MME_EMM_CAUSE_SYNCH_FAILURE, res);
+    // send_authentication_failure(LIBLTE_MME_EMM_CAUSE_SYNCH_FAILURE, res);
   } else {
     logger.warning("Network authentication failure");
     srsran::console("Warning: Network authentication failure\n");
-    send_authentication_failure(LIBLTE_MME_EMM_CAUSE_MAC_FAILURE, nullptr);
+    // send_authentication_failure(LIBLTE_MME_EMM_CAUSE_MAC_FAILURE, nullptr);
   }
 }
 
@@ -1817,7 +1827,7 @@ void nas::send_detach_request(bool switch_off)
   }
 
   if (rrc->is_connected()) {
-    rrc->write_sdu(std::move(pdu));
+    // rrc->write_sdu(std::move(pdu));
   } else {
     if (not rrc->connection_request(srsran::establishment_cause_t::mo_sig, std::move(pdu))) {
       logger.error("Error starting RRC connection");

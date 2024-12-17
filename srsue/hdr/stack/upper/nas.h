@@ -122,7 +122,7 @@ private:
   bool    auth_request    = false;
   uint8_t current_sec_hdr = LIBLTE_MME_SECURITY_HDR_TYPE_PLAIN_NAS;
 
-  const uint32_t max_attach_attempts    = 5; // Sec. 5.5.1.2.6
+  const uint32_t max_attach_attempts    = 100; // Sec. 5.5.1.2.6
   uint32_t       attach_attempt_counter = 0;
 
   uint32_t ip_addr       = 0;
@@ -144,7 +144,7 @@ private:
   const uint32_t t3402_duration_ms          = 12 * 60 * 1000; // 12m
   const uint32_t t3410_duration_ms          = 15 * 1000;      // 15s
   const uint32_t t3411_duration_ms          = 10 * 1000;      // 10s
-  const uint32_t t3421_duration_ms          = 15 * 1000;      // 15s
+  const uint32_t t3421_duration_ms          = 15 * 10000;      // 15s
   const uint32_t reattach_timer_duration_ms = 2 * 1000;       // 2s (arbitrarily chosen to delay re-attach)
 
   // TS 23.003 Sec. 6.2.2 IMEISV's last two octets are Software Version Number (SVN)

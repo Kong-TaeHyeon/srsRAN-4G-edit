@@ -272,6 +272,8 @@ void ue_stack_lte::stop_impl()
 {
   running = false;
 
+  
+  std::cout << "stop_impl" << std::endl;
   usim->stop();
   nas.stop();
   nas_5g.stop();
@@ -319,6 +321,7 @@ bool ue_stack_lte::switch_off()
   if (running) {
     ue_task_queue.try_push([this]() {
       // generate detach request with switch-off flag
+      std::cout <<"Test Switch Off" << std::endl;
       nas.switch_off();
     });
   }
